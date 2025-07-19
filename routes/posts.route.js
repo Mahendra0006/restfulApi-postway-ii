@@ -6,6 +6,7 @@ import {
   getPost,
   updatePost,
   deletePost,
+  upload,
 } from "../controllers/post.controller.js";
 import {
   auth,
@@ -18,7 +19,10 @@ const router = express.Router();
 router.get("/all", auth, getAllPosts);
 router.get("/:postId", auth, getPost);
 router.get("/user/:userId", auth, getUserPosts);
-router.post("/", auth, validate(postValidation), createPost);
+
+// Upload middleware FIRST, then custom validation inside createPost
+router.post("/", auth, upload.single("image"), createPost);
+
 router.put("/:postId", auth, validate(postValidation), updatePost);
 router.delete("/:postId", auth, deletePost);
 

@@ -1,6 +1,8 @@
 import { Post } from "../models/Post.model.js";
 import multer from "multer";
+import { body, validationResult } from "express-validator";
 
+// Multer setup
 const storage = multer.diskStorage({
   destination: "./uploads/",
   filename: (req, file, cb) => {
@@ -8,7 +10,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({
+export const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     const filetypes = /jpeg|jpg|png/;
@@ -16,27 +18,38 @@ const upload = multer({
     if (mimetype) {
       cb(null, true);
     } else {
-      cb(new Error("Images only (jpeg, jpg, png)"), false);
+      cb(new Error("Only jpeg, jpg, png files are allowed"), false);
     }
   },
 });
 
-export const createPost = [
-  upload.single("image"),
-  async (req, res, next) => {
-    try {
-      const post = new Post({
-        user: req.user._id,
-        content: req.body.content,
-        image: req.file ? req.file.path : null,
-      });
-      await post.save();
-      res.status(201).json(post);
-    } catch (error) {
-      next(error);
+// Post Creation Controller
+export const createPost = async (req, res, next) => {
+  try {
+    // Manually validate "content"
+    await body("content")
+      .trim()
+      .notEmpty()
+      .withMessage("Content is required")
+      .run(req);
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
-  },
-];
+
+    const post = new Post({
+      user: req.user._id,
+      content: req.body.content,
+      image: req.file ? req.file.path : null,
+    });
+
+    await post.save();
+    res.status(201).json(post);
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getAllPosts = async (req, res, next) => {
   try {
